@@ -44,13 +44,6 @@
   @keyframes peck{0%{transform:rotate(0)}40%{transform:rotate(32deg) translateY(7px)}100%{transform:rotate(0)}}
   #goose.flip svg{transform:scaleX(-1)}
   #goose svg{display:block;overflow:visible}
-  #honk{
-    position:fixed;z-index:4;pointer-events:none;
-    background:#fff;border:1px solid #111;border-radius:12px;
-    font-size:13px;font-weight:700;padding:4px 10px;
-    opacity:0;transform:translateY(4px);transition:.25s;white-space:nowrap;
-  }
-  #honk.show{opacity:1;transform:translateY(-6px)}
   .count{
     position:fixed;bottom:12px;left:0;right:0;text-align:center;
     color:#ccc;font-size:12px;pointer-events:none;
@@ -89,8 +82,6 @@
   </svg>
   </div>
 </div>
-<div id="honk">дзьоб!</div>
-
 <div id="runaway">Святослав Масловський</div>
 <div class="count">лопнуто: <span id="pops">0</span></div>
 
@@ -121,12 +112,19 @@
   t.addEventListener('touchstart', moveAway, {passive:true});
   t.addEventListener('mouseover', moveAway);
 
-  // ГУСАК: плавно женеться за текстом, дзьобає і штовхає його
+  // ГУСАК: просто гуляє екраном, а як дійде до тексту — дзьобне
   const goose = document.getElementById('goose');
-  const honk = document.getElementById('honk');
-  const honks = ['дзьоб!', 'га!', 'а-ну стій!', 'г-е-е!', 'попався!'];
-  let gx = 80, gy = innerHeight * 0.6, lastPeck = 0, honkTimer = null;
+  let gx = 80, gy = innerHeight * 0.6, lastPeck = 0;
+  let wx = innerWidth / 2, wy = innerHeight / 2, waiting = 0;
   goose.style.left = gx + 'px'; goose.style.top = gy + 'px';
+
+  function newWaypoint(){
+    // випадкова точка прогулянки
+    const pad = 60;
+    wx = pad + Math.random() * Math.max(innerWidth - pad * 2, 10);
+    wy = pad + Math.random() * Math.max(innerHeight - pad * 2, 10);
+  }
+  newWaypoint();
 
   function pushText(fromX, fromY){
     // штовхнути текст від гусака на 70-100px, плавно (transition в CSS)
@@ -144,37 +142,37 @@
     t.style.transform = 'none';
   }
 
-  function showHonk(x, y){
-    honk.textContent = honks[Math.floor(Math.random() * honks.length)];
-    honk.style.left = (x + 60) + 'px'; honk.style.top = (y - 10) + 'px';
-    honk.classList.add('show');
-    clearTimeout(honkTimer);
-    honkTimer = setTimeout(() => honk.classList.remove('show'), 900);
-  }
+  // (гусак мовчить — ніяких написів)
 
-  (function chase(){
-    const r = t.getBoundingClientRect();
-    const tx = r.left + r.width / 2, ty = r.top + r.height / 2;
-    const dx = tx - (gx + 48), dy = ty - (gy + 40);
+  (function walk(){
+    const now = performance.now();
+    // крок до випадкової точки прогулянки
+    const dx = wx - gx, dy = wy - (gy + 40);
     const dist = Math.hypot(dx, dy);
-    if (dist > 8){
-      // плавна погоня: чим далі — тим швидше, але м'яко
-      const sp = Math.min(0.045, 0.015 + dist / 4000);
-      gx += dx * sp; gy += dy * sp;
+    if (now < waiting){
+      // стоїть, відпочиває
+    } else if (dist < 14){
+      waiting = now + 600 + Math.random() * 1600;
+      newWaypoint();
+    } else {
+      const sp = 1.1;
+      gx += dx / dist * sp; gy += dy / dist * sp;
       goose.style.left = gx + 'px'; goose.style.top = gy + 'px';
     }
-    // дивитись у бік тексту
-    goose.classList.toggle('flip', tx < gx + 48);
-    // дзьобнути, коли впритул (не частіше разу на секунду)
-    const now = performance.now();
-    if (dist < 95 && now - lastPeck > 1000){
+    // де текст і як далеко
+    const r = t.getBoundingClientRect();
+    const tx = r.left + r.width / 2, ty = r.top + r.height / 2;
+    const tDist = Math.hypot(tx - (gx + 48), ty - (gy + 40));
+    // дивитись: на текст, коли він поруч, інакше — куди йде
+    goose.classList.toggle('flip', (tDist < 220 ? tx : wx) < gx + 48);
+    // дійшов до тексту — дзьобнути, текст відскочить, гусак йде далі
+    if (tDist < 95 && now - lastPeck > 1200){
       lastPeck = now;
       goose.classList.remove('peck'); void goose.offsetWidth;
       goose.classList.add('peck');
-      showHonk(gx, gy);
-      setTimeout(() => pushText(gx + 48, gy + 40), 150);
+      setTimeout(() => { pushText(gx + 48, gy + 40); newWaypoint(); }, 150);
     }
-    requestAnimationFrame(chase);
+    requestAnimationFrame(walk);
   })();
 
   // бульбашки: пливуть вгору, лопаються по кліку

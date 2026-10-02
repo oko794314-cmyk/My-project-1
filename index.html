@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Святослав Масловський</title>
+<style>
+  /* білий мінімальний сайт */
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+    background:#ffffff;color:#111;
+    height:100vh;overflow:hidden;
+  }
+  .hint{
+    position:fixed;top:14px;left:0;right:0;text-align:center;
+    color:#bbb;font-size:13px;pointer-events:none;
+  }
+  #runaway{
+    position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    font-size:17px;font-weight:600;letter-spacing:.02em;white-space:nowrap;
+    background:#fff;color:#111;
+    border:1px solid #111;border-radius:999px;
+    padding:8px 18px;user-select:none;cursor:default;
+    transition:left .3s ease, top .3s ease;
+    z-index:3;
+  }
+  #bubbles{position:fixed;inset:0;z-index:1;touch-action:none}
+  .hint,.count{z-index:2}
+  /* білий гусак-хуліган */
+  #goose{position:fixed;left:80px;top:60vh;width:96px;z-index:2;pointer-events:none;
+    filter:drop-shadow(0 10px 12px rgba(0,0,0,.12))}
+  #goose .waddle{animation:waddle .45s ease-in-out infinite;transform-origin:50% 85%}
+  @keyframes waddle{0%,100%{rotate:-5deg}50%{rotate:5deg}}
+  #goose .wing{animation:flap 1.4s ease-in-out infinite;transform-origin:34px 58px;transform-box:fill-box}
+  @keyframes flap{50%{transform:rotate(-14deg)}}
+  #goose .legA{animation:stepA .45s ease-in-out infinite}
+  #goose .legB{animation:stepB .45s ease-in-out infinite}
+  @keyframes stepA{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  @keyframes stepB{0%,100%{transform:translateY(-4px)}50%{transform:translateY(0)}}
+  #goose .neck{transform-origin:62px 52px;transform-box:fill-box}
+  #goose.peck .neck{animation:peck .38s ease}
+  @keyframes peck{0%{transform:rotate(0)}40%{transform:rotate(32deg) translateY(7px)}100%{transform:rotate(0)}}
+  #goose.flip svg{transform:scaleX(-1)}
+  #goose svg{display:block;overflow:visible}
+  .count{
+    position:fixed;bottom:12px;left:0;right:0;text-align:center;
+    color:#ccc;font-size:12px;pointer-events:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="hint">наведи курсор на текст • лопай бульбашки</div>
+<canvas id="bubbles"></canvas>
+
+<!-- білий гусак, який ганяється за текстом -->
+<div id="goose" title="гусак">
+  <div class="waddle">
+  <svg width="96" height="96" viewBox="0 0 100 100">
+    <!-- ніжки -->
+    <g stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round">
+      <g class="legA"><line x1="38" y1="82" x2="38" y2="93"/><line x1="32" y1="93" x2="44" y2="93"/></g>
+      <g class="legB"><line x1="58" y1="82" x2="58" y2="93"/><line x1="52" y1="93" x2="64" y2="93"/></g>
+    </g>
+    <!-- хвіст -->
+    <polygon points="12,62 26,56 24,70" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round"/>
+    <!-- тіло -->
+    <ellipse cx="46" cy="66" rx="28" ry="17" fill="#fff" stroke="#111" stroke-width="2.5"/>
+    <!-- крило -->
+    <ellipse class="wing" cx="40" cy="62" rx="14" ry="9" fill="#f3f3f3" stroke="#111" stroke-width="2"/>
+    <!-- шия + голова (клює) -->
+    <g class="neck">
+      <path d="M68,60 C76,52 79,40 78,28" fill="none" stroke="#111" stroke-width="13" stroke-linecap="round"/>
+      <path d="M68,60 C76,52 79,40 78,28" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+      <circle cx="78" cy="22" r="11" fill="#fff" stroke="#111" stroke-width="2.5"/>
+      <polygon points="88,20 99,24 88,29" fill="#f59e0b" stroke="#111" stroke-width="1.5" stroke-linejoin="round"/>
+      <circle cx="80" cy="19" r="2.2" fill="#111"/>
+      <circle cx="74" cy="13" r="2.5" fill="#fde68a"/>
+    </g>
+  </svg>
+  </div>
+</div>
+<div id="runaway">Святослав Масловський</div>
+<div class="count">лопнуто: <span id="pops">0</span></div>
+
+<script>
+  // текст тікає від курсора
+  const t = document.getElementById('runaway');
+
+  function moveAway() {
+    // випадкова позиція по всьому екрану з відступом від країв
+    const pad = 20;
+    const maxX = window.innerWidth - t.offsetWidth - pad;
+    const maxY = window.innerHeight - t.offsetHeight - pad;
+    const nx = pad + Math.random() * Math.max(maxX - pad, 10);
+    const ny = pad + Math.random() * Math.max(maxY - pad, 10);
+    t.style.left = nx + 'px';
+    t.style.top = ny + 'px';
+    t.style.transform = 'none';
+  }
+
+  // на ПК — коли курсор близько, на телефоні — при дотику
+  document.addEventListener('mousemove', e => {
+    const r = t.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const d = Math.hypot(e.clientX - cx, e.clientY - cy);
+    if (d < 100) moveAway();
+  });
+  t.addEventListener('touchstart', moveAway, {passive:true});
+  t.addEventListener('mouseover', moveAway);
+
+  // ГУСАК: просто гуляє екраном, а як дійде до тексту — дзьобне
+  const goose = document.getElementById('goose');
+  let gx = 80, gy = innerHeight * 0.6, lastPeck = 0;
+  let wx = innerWidth / 2, wy = innerHeight / 2, waiting = 0;
+  goose.style.left = gx + 'px'; goose.style.top = gy + 'px';
+
+  function newWaypoint(){
+    // випадкова точка прогулянки
+    const pad = 60;
+    wx = pad + Math.random() * Math.max(innerWidth - pad * 2, 10);
+    wy = pad + Math.random() * Math.max(innerHeight - pad * 2, 10);
+  }
+  newWaypoint();
+
+  function pushText(fromX, fromY){
+    // штовхнути текст від гусака на 70-100px, плавно (transition в CSS)
+    const r = t.getBoundingClientRect();
+    let cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let dx = cx - fromX, dy = cy - fromY;
+    const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
+    const dist = 70 + Math.random() * 40;
+    const pad = 16;
+    let nx = cx + dx * dist - r.width / 2;
+    let ny = cy + dy * dist - r.height / 2;
+    nx = Math.max(pad, Math.min(innerWidth - r.width - pad, nx));
+    ny = Math.max(pad, Math.min(innerHeight - r.height - pad, ny));
+    t.style.left = nx + 'px'; t.style.top = ny + 'px';
+    t.style.transform = 'none';
+  }
+
+  // (гусак мовчить — ніяких написів)
+
+  (function walk(){
+    const now = performance.now();
+    // крок до випадкової точки прогулянки
+    const dx = wx - gx, dy = wy - (gy + 40);
+    const dist = Math.hypot(dx, dy);
+    if (now < waiting){
+      // стоїть, відпочиває
+    } else if (dist < 14){
+      waiting = now + 600 + Math.random() * 1600;
+      newWaypoint();
+    } else {
+      const sp = 1.1;
+      gx += dx / dist * sp; gy += dy / dist * sp;
+      goose.style.left = gx + 'px'; goose.style.top = gy + 'px';
+    }
+    // де текст і як далеко
+    const r = t.getBoundingClientRect();
+    const tx = r.left + r.width / 2, ty = r.top + r.height / 2;
+    const tDist = Math.hypot(tx - (gx + 48), ty - (gy + 40));
+    // дивитись: на текст, коли він поруч, інакше — куди йде
+    goose.classList.toggle('flip', (tDist < 220 ? tx : wx) < gx + 48);
+    // дійшов до тексту — дзьобнути, текст відскочить, гусак йде далі
+    if (tDist < 95 && now - lastPeck > 1200){
+      lastPeck = now;
+      goose.classList.remove('peck'); void goose.offsetWidth;
+      goose.classList.add('peck');
+      setTimeout(() => { pushText(gx + 48, gy + 40); newWaypoint(); }, 150);
+    }
+    requestAnimationFrame(walk);
+  })();
+
+  // бульбашки: пливуть вгору, лопаються по кліку
+  const cv = document.getElementById('bubbles');
+  const ctx = cv.getContext('2d');
+  const popsEl = document.getElementById('pops');
+  let bubs = [], pops = 0, rings = [];
+
+  function size(){ cv.width = innerWidth; cv.height = innerHeight; }
+  size(); addEventListener('resize', size);
+
+  function spawn(){
+    if (bubs.length < 14) bubs.push({
+      x: 20 + Math.random() * (cv.width - 40),
+      y: cv.height + 30,
+      r: 12 + Math.random() * 20,
+      v: .6 + Math.random() * 1.2,
+      wob: Math.random() * 6.28
+    });
+  }
+  setInterval(spawn, 700);
+  for (let i = 0; i < 8; i++){ spawn(); bubs[i].y = Math.random() * cv.height; }
+
+  function loop(){
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    bubs.forEach(b => {
+      b.y -= b.v; b.wob += .02; b.x += Math.sin(b.wob);
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = '#111'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(b.x - b.r/3, b.y - b.r/3, b.r/5, 0, 7);
+      ctx.fillStyle = '#e5e5e5'; ctx.fill();
+    });
+    bubs = bubs.filter(b => b.y > -40);
+    // кільця від лопання
+    rings.forEach(r => { r.r += 3; r.a -= .06; });
+    rings = rings.filter(r => r.a > 0);
+    rings.forEach(r => {
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 7);
+      ctx.strokeStyle = 'rgba(17,17,17,' + r.a + ')'; ctx.lineWidth = 2; ctx.stroke();
+    });
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  function popAt(px, py){
+    for (let i = bubs.length - 1; i >= 0; i--){
+      const b = bubs[i];
+      if (Math.hypot(b.x - px, b.y - py) < b.r + 10){
+        bubs.splice(i, 1);
+        rings.push({x: b.x, y: b.y, r: b.r, a: 1});
+        pops++; popsEl.textContent = pops;
+        spawn();
+        break;
+      }
+    }
+  }
+  cv.addEventListener('pointerdown', e => {
+    const r = cv.getBoundingClientRect();
+    popAt(e.clientX - r.left, e.clientY - r.top);
+  });
+</script>
+</body>
+</html>
